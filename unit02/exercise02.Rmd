@@ -1,0 +1,86 @@
+---
+title: "Exercise 2"
+author: "Jan Hohenheim"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading data
+
+
+```{r q0}
+rm(list=ls())
+library("readr")
+library("ggplot2")
+library("dplyr")
+library("GGally")
+library("tidyr")
+
+financing_healthcare <- read_csv("../all_datasets_bio144/financing_healthcare.csv")
+head(financing_healthcare)
+```
+
+## Questions 1 and 2
+
+How many countries and years are in the dataset?
+
+Hint: try using the summarise function in dplyr, and ask for the length of the unique list of countries.
+
+
+```{r q1}
+financing_healthcare |>
+  summarise(countries=n_distinct(country), years=n_distinct(year))
+```
+
+## Question 3
+How many rows have a non "NA" value for both of the two variables we're most interested in: health_exp_total and child_mort?
+
+Hint: you can ask if a value in a variable is NA with the function is.na(). Or if you use !is.na() then you get the ones that are not NA. E.g. !is.na(my_variable) asks which values of my_variable are not NA.
+
+Hint: Use the ampersand symbol to ask two things.
+
+Hint: use filter in the dplyr library.
+
+```{r q3}
+financing_healthcare |>
+  select(health_exp_total, child_mort) |>
+  filter(!(is.na(health_exp_total) | is.na(child_mort))) |>
+  count()
+```
+
+## Question 4
+
+There are lots of interesting things we could do with this dataset, and we'll get to some in future weeks. For now lets do two things.
+
+First, let us have a go at getting statistics for groups of observations, and then making a graph to visualise those statistics.
+
+The first thing to do is to reduce the dataset a bit more:
+
+Make a dataset:
+
+- containing only observations from 2013 (hint, use the filter function in the dplyr package)
+- that contains only these variables: year, country, continent, health_exp_total, child_mort, life_expectancy (hint: use the select function in the dplyr package)
+- contains no missing values (hint: use the drop_na() function in the tidyr package)
+
+Your new dataset should have 178 rows and 6 variables.
+
+Now, let's say we want to know the average and standard deviation of the child mortality in each continent.
+
+Use the group_by() and summarise() functions of the dplyr package to calculate these.
+
+Rounded to one decimal place, what is the average number of children that died before the age of five, per 1000 born, in Africa in 2013? (Recall that the child_mort variable gives number of deaths by age five per 1000 births.)
+
+(Make sure you do the rounding on the accurate value, and not one already rounded by R somehow.)
+
+```{r q4}
+financing_healthcare_of_interest <- financing_healthcare |>
+  filter(year == 2013) |>
+  select(year, country, continent, health_exp_total, child_mort, life_expectancy) |>
+  drop_na()
+
+
+```

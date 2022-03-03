@@ -1,0 +1,150 @@
+---
+title: "Exercise 1"
+author: "Jan Hohenheim"
+date: "3/3/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading data
+
+```{r loading}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+
+body_data <- read_tsv("../all_datasets_bio144/bodyfat.txt")
+head(body_data)
+summary(body_data)
+```
+
+## Question 1
+Make a graph that allows you to see the frequency distribution of the response variable (bodyfat). That is the distribution of values of body fat of the individual people in the study.
+
+Hint: use the ggplot function and the geom_histogram function.
+
+Do you think the values of bodyfat are normally distributed?
+
+```{r q1}
+body_data |>
+  select(bodyfat) |>
+  ggplot(aes(x=bodyfat)) +
+  geom_histogram(bins=30) +
+  theme_bw()
+
+```
+
+## Question 1.2
+Use the filter function from the dplyr package to show the individuals with bodyfat greater than 35.
+
+Don't forget to first load the dplyr package (or tidyverse).
+
+How many individuals have body fat greater than 35?
+
+```{r q1.2}
+body_data |>
+  filter(bodyfat > 35) |>
+  count()
+```
+
+## Question 2
+When we identify a potentially problematic value in the response variable, we might want to look at that particular row. There are a few ways to do this in R / RStudio. However you find easiest, find the bmi of the individual with the highest value of bodyfat and type it in below:
+
+```{r q2}
+body_data |>
+  arrange(desc(bodyfat)) |>
+  select(bmi) |>
+  slice(1)
+```
+
+## Question 3
+We have so far focused on looking at the distribution of the response variable (bodyfat in this dataset). We should also, however, look at the distribution of the other variables, for example to check if there are any rather unusal / extreme values, and whether a transformation might be in order.
+
+Look at the distrbution of all the other variables. Which of the ones listed below seem to have at least one rather extreme / unusual value?
+
+Hint: Use your current knowledge of R to make all the histograms; probably this means copy and paste the code for one, and change the variable name. There is a quicker way, that you'll see in the explanation text you will get when you answer the question.
+
+```{r q3}
+plot_histogram <- function(col) {
+  body_data |>
+    select(col) |>
+    ggplot(aes(x=body_data[[col]])) +
+    geom_histogram(bins=30) +
+    xlab(col) +
+    theme_bw()
+}
+cols_of_interest <- c("height", "hip", "wrist", "density", "ankle", "forearm") 
+lapply(cols_of_interest, plot_histogram) 
+  
+```
+
+## Question 5
+The dataset contains a variable called bmi. This is body mass index. We can calculate this ourselves, from two other variables in the dataset.
+
+Find the formula for calculating bmi, and add your own calculation of bmi to the dataset.
+
+Hints:
+
+- Unfortunately the units of the measures in the dataset are not clear. You need to do some sleuthing to know if this matters for calculating bmi.
+
+- Use the mutate function of the dplyr package to calculate and add the new variable.
+
+```{r q5}
+body_data = body_data |> 
+  mutate(bmi_calculated=gewicht/(hoehe/100)^2)
+head(body_data)
+```
+
+## Question 6
+Across all variables, which individuals (identified by the number in the Nr column) seem to have rather extreme or unusual values in at least one variable?
+
+```{r q6}
+body_data |>
+  with(height < 40) |>
+  which()
+```
+
+## Question 
+
+
+Make a copy of the data that doesn't include the individuals in the correct answer to the previous question.
+
+One way to do this is with this code, if for example, you didn't want to keep individuals with numbers 1, 2, 3, 4, 5, and 6..
+
+bodyfat_c <- filter(bodyfat, !(Nr %in% c(1, 2, 3, 4, 5, 6)))
+
+(Make sure you use the name you gave your data in place of bodyfat.
+
+### Looking at relationships among variables
+
+We should now try to get a feel for relationships among all of our variables. We'll let R do the hard work of making all the graphs we want to see, though this still leaves us all the hard work of looking at and interpreting the graphs.
+
+We will use a new package GGally to help us. So install that package onto your computer, and then load it into R with library(GGally).
+
+Now, in R, use the function ggpairs(). Beware that this can take a while to run, and you'll need to look at the resulting panel of graphs on a big screen (or export the graph, and then move and zoom around it in a graphics viewer).
+
+(Oh, by the way, you could use the function pairs() to get all the bivariate relationships, but not the other information given by ggpairs().)
+
+Wow! There is a lot of graphs and information! However, focus on the column of graphs with bodyfat at the top. Where are the strongest looking relationships?
+
+Note that on the diagonal of the ggpairs plot you get a line that is a curve showing the distribution of that variable, and in the top right triangle you get the correlation coefficients.
+
+ 
+
+Recall that aim of the study is to find out which easily taken measurements might be good predictors of bodyfat (which is itself not so easy to measure).
+
+Which of these variables do you think are likely to be good predictors of body fat?
+
+Hint: look at the relationships between the variables using ggpairs in the GGally package. Or just pairs() :)
+
+
+```{r q7}
+outliers = c(31, 39, 42, 86)
+body_data |>
+  filter(!(Nr %in% outliers)) |>
+  ggpairs()
+```

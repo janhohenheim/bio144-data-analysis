@@ -45,7 +45,7 @@ class_RTs
 ## Otherwise columns will have the wrong names, which would be very confusing
 names(class_RTs) <- c("Timestamp", "ID", "Gender", "Weight",
                       "Handedness", "Pref_Reaction_time_1",
-                      "Pref_Reaction_time_2", "Pref_Reaction_time_3", 
+                      "Pref_Reaction_time_2", "Pref_Reaction_time_3",
                       "Pref_Reaction_time_4", "Pref_Reaction_time_5",
                       "Pref_Reaction_time",
                       "Nonpref_Reaction_time_ave",
@@ -97,7 +97,7 @@ ggplot(data=class_RTs, aes(x=Pref_Reaction_time)) +
   facet_grid(~Gender)
 
 ## And a box and whisker plot
-ggplot(data=class_RTs, aes(x=Gender, y=Pref_Reaction_time)) +
+ggplot(data=class_RTs, aes(x = Gender, y = Pref_Reaction_time)) +
   geom_boxplot()
 
 ## Or just the data points (with some jitter, to separate overlapping points):
@@ -138,7 +138,7 @@ class_RTs_filtered %>%
 
 #######################################################
 ## Do the t test and assign the outcome to an object:
-my_ttest <- t.test(class_RTs$Pref_Reaction_time ~class_RTs$Gender)
+my_ttest <- t.test(class_RTs$Pref_Reaction_time ~class_RTs$Gender,
                    data=class_RTs,
                    var.equal=TRUE)
 ## look at the result of the t-test
