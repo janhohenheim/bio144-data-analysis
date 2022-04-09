@@ -1,0 +1,142 @@
+---
+title: "Exercises 02"
+author: "Jan Hohenheim"
+date: "3/10/2022"
+output: html_notebook
+---
+
+## Setup
+```{r whipe}
+rm(list = ls())
+```
+
+```{r loading}
+library(readr)
+library(ggplot2)
+library(ggthemes)
+library(ggfortify)
+library(qqplotr)
+library(dplyr)
+library(GGally)
+library(glue)
+library(tidyr)
+library(cowplot)
+library(latex2exp)
+library(purrr)
+```
+
+```{r data}
+financing_healthcare <- read_csv("../all_datasets_bio144/financing_healthcare.csv")
+head(financing_healthcare)
+summary(financing_healthcare)
+glimpse(financing_healthcare)
+
+theme <- 
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized_2(light = FALSE)
+```
+
+## Task
+First make / synthesise some normally distributed residuals, by drawing some random numbers from the normal distribution. The function to do this in R is rnorm().
+
+resids <- rnorm(30, 0, 1)
+
+Then use ggplot to plot the distribution of these residuals. You know how to do this! Don't forget to load the package that ggplot is in -- you will get the error "Error: could not find function "ggplot"" if you forget to do this.
+
+In this case, the distribution really should look normal, as we drew numbers from a normal distribution!
+
+The QQ-plot is quite easy to make:
+
+qqnorm(resids)
+
+And we can put a line on where we expect the points to lie if the data is normally distributed:
+
+qqline(resids)
+
+```{r recap}
+resids <- data.frame(resids = rnorm(30, 0, 1))
+plot_hist <- resids |>
+  ggplot(aes(x = resids)) +
+  geom_histogram(bins=15, alpha = 0.5, fill = "salmon") +
+  ggtitle("Histogram of normal sample") +
+  theme
+
+plot_qq_norm <- resids |>
+  ggplot(aes(sample = resids)) +
+  stat_qq_band(fill = "salmon", alpha = 0.5) +
+  stat_qq_line() +
+  stat_qq_point() +
+  ggtitle("QQ plot of normal sample") +
+  theme
+
+plot_grid(plot_hist, plot_qq_norm, ncol = 2)
+```
+
+```{r plot_dists}
+plot_distribution <- function(data, name) {
+  resids <- data.frame(resids = data)
+  plot_hist <- resids |>
+    ggplot(aes(x = resids)) +
+    geom_histogram(bins = 15, alpha = 0.5, fill = "salmon") +
+    ggtitle(glue("Histogram of {name} sample")) +
+    theme
+  plot_qq <- resids |>
+    ggplot(aes(sample = resids)) +
+    stat_qq_band(distribution = name, fill = "salmon", alpha = 0.5) +
+    stat_qq_line(distribution = name) +
+    stat_qq_point(distribution = name) +
+    ggtitle(glue("QQ plot of {name} sample")) +
+    theme
+  
+  list(plot_hist, plot_qq)
+}
+
+n <- 100
+args <- list(
+  list(name = "norm", data = rnorm(n, 0, 1)),
+  list(name = "unif", data = runif(n)),
+  list(name = "beta", data = rbeta(n, 5,2)),
+  list(name = "beta", data = rbeta(n, 2, 5)),
+  list(name = "lnorm", data = rlnorm(n, 0, 1)),
+  list(name = "pois", data = rpois(n, 10)),
+  list(name = "nbinom", data = rnbinom(n, 10, 0.5))
+  )
+plot_distribution_from_args <- function(args) do.call(plot_distribution, args)
+plots <- distributions |>
+  lapply(plot_distribution_from_args) |>
+  flatten()
+plot_grid(plotlist = plots, ncol = 2, align = "hv")
+```
+```{r plot_dists_by_side}
+plot_distribution <- function(data, name) {
+  resids <- data.frame(resids = data)
+  plot_hist <- resids |>
+    ggplot(aes(x = resids)) +
+    geom_histogram(bins = 15, alpha = 0.5, fill = "salmon") +
+    ggtitle(glue("Histogram of {name} sample")) +
+    theme
+  plot_qq <- resids |>
+    ggplot(aes(sample = resids)) +
+    stat_qq_band(distribution = name, fill = "salmon", alpha = 0.5) +
+    stat_qq_line(distribution = name) +
+    stat_qq_point(distribution = name) +
+    ggtitle(glue("QQ plot of {name} sample")) +
+    theme
+  
+  plot_grid(plot_hist, plot_qq)
+}
+
+n <- 100
+args <- list(
+  list(name = "norm", data = rnorm(n, 0, 1)),
+  list(name = "unif", data = runif(n)),
+  list(name = "beta", data = rbeta(n, 5,2)),
+  list(name = "beta", data = rbeta(n, 2, 5)),
+  list(name = "lnorm", data = rlnorm(n, 0, 1)),
+  list(name = "pois", data = rpois(n, 10)),
+  list(name = "nbinom", data = rnbinom(n, 10, 0.5))
+  )
+plot_distribution_from_args <- function(args) do.call(plot_distribution, args)
+distributions |>
+  lapply(plot_distribution_from_args)
+```

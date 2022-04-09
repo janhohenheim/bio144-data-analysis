@@ -1,0 +1,145 @@
+---
+title: "Exercises 01"
+author: "Jan Hohenheim"
+date: "3/10/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r loading}
+rm(list = ls())
+library(readr)
+library(ggthemes)
+library(ggfortify)
+library(tidyverse)
+library(GGally)
+library(glue)
+library(tidyr)
+library(latex2exp)
+
+theme <- 
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized()
+```
+
+## How many observations?
+The caste variable shows whether an individual is a worker or a lazy. How many individuals are in the worker caste (1 point)?
+How many are lazy (1 point)?
+
+Hint: use the table function.
+```{r table}
+mole_rat <- read_csv("../all_datasets_bio144/MoleRatLayabouts.csv")
+mole_rat$caste |>
+  table()
+```
+
+## OK distributions?
+How do the distributions of the Mass and Energy variables look?
+
+Hint: because there are not so many data points, you will need to choose less than 30 bins in your histogram (30 is the default).
+
+```{r ok}
+p1 <- mole_rat |>
+  ggplot(aes(x = Mass)) +
+  geom_histogram(bins = 20) +
+  theme
+p2 <- mole_rat |>
+  ggplot(aes(x = Energy)) +
+  geom_histogram(bins = 20) +
+  theme
+plot_grid(p1, p2)
+```
+
+## Who is lazy?
+Using ggplot (of course) make a graph that will help you answer the biological question... do lazy and worker individuals differ in the energy expenditure, after one accounts for any difference in size.  
+For a given mass, do worker or lazy individuals have higher energy expenditure?
+```{r lazy}
+mole_rat |>
+  ggplot(aes(x = Mass, y = Energy, colour = caste)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme
+```
+
+##  How many degrees of freedom?
+
+If you fit model D, how many degrees of freedom for error would remain?
+
+D: lm(log10_Energy ~ caste * log10_Mass, dd)
+
+```{r df}
+# intercept, caste (2 - 1), mass, caste:mass
+nrow(mole_rat) - 1 - 1 - 1 - 1
+```
+
+##  What slope?
+Fit the model with the interaction (this is sometimes called the "full" model) and answer the following questions:
+
+Rounded to two significant figures, what is the estimated difference in slope between the two castes (1 point)?
+
+What is the standard error (rounded to two sig. figs.) (1 point)?
+
+```{r slope}
+dd <- mole_rat |>
+  mutate(log10_Energy = log10(Energy),
+         log10_Mass = log10(Mass))
+m1 <- lm(log10_Energy ~ caste * log10_Mass, dd)
+m1 |> summary()
+```
+
+# What difference in R-squared?
+Fit the model with both main effects but no interaction.
+
+What is the difference between the r-squared (R2) of this model, and the one with the interaction (rounded to two sig. figs. and ignore sign)?
+```{r diffr2}
+m2 <- lm(log10_Energy ~ caste + log10_Mass, dd)
+m2 |> summary()
+
+summary(m2)$r.squared - summary(m1)$r.squared
+```
+
+## Exercise 1 Figure
+
+Now comes probably the most challenging part of the practical. Making a figure that shows the best supported statistical model, i.e. the one without an interaction term.
+
+It is challenging because you should not do this:
+
+ggplot(dd, aes(x=log10_Mass, y=log10_Energy, colour=caste)) +
+    geom_point() +
+    geom_smooth(method="lm")
+
+You can't do this, because the lines on the graph have different slopes, and the best supported model does not have different slopes.
+
+Hint: you will need to use the expand.grid and predict functions. You saw this in action before, in the multiple regression lesson.
+
+OK, I give you a good start...
+
+Have a look at the new dataset this creates. Then use it with predict. Then add it to the plot, just like I did in the body fat video lectures.
+
+If you get done with that, make the graph look beautiful, have appropriate axes labels, etc. Also, try to make it work in black and white.
+```{r fig}
+new_data <- expand.grid(
+  log10_Mass = seq(min(dd$log10_Mass), max(dd$log10_Mass), length = 100),
+  caste = unique(dd$caste))
+new_data |> glimpse()
+
+predicted_energy <- m2 |>
+  predict(newdata = new_data, interval = "confidence")
+
+predicted_mole_rat <- new_data |>
+  cbind(predicted_energy)
+
+predicted_mole_rat |>
+  ggplot(aes(x = log10_Mass, y = fit, colour = caste)) +
+  geom_line() +
+  geom_point(data = dd, aes(y = log10_Energy)) +
+  geom_smooth(aes(ymin = lwr, ymax = upr), stat = "identity") +
+  labs(title = "Model prediction of energy expenditure for constant mass",
+       x = TeX("$\\log_{10}$(mass in g)"),
+       y = TeX("$\\log_{10}$(energy expenditure in kcal)")) +
+  theme
+```

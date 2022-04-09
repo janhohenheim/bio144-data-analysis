@@ -1,0 +1,78 @@
+---
+title: "Exercises 01"
+author: "Jan Hohenheim"
+date: "3/10/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r loading}
+rm(list = ls())
+library(readr)
+library(ggthemes)
+library(ggfortify)
+library(tidyverse)
+library(GGally)
+library(glue)
+library(tidyr)
+library(latex2exp)
+
+theme <- 
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized_2(light = FALSE)
+```
+
+## Repeat data wrangling from last week
+```{r data}
+financing_healthcare <- read_csv("../all_datasets_bio144/financing_healthcare.csv")
+
+financing_healthcare_of_interest <- financing_healthcare |>
+  filter(year == 2013) |>
+  select(continent, health_exp_total, child_mort) |>
+  drop_na()
+
+log10_financing_healthcare_of_interest <-
+  financing_healthcare_of_interest |>
+  mutate(health_exp_total = log10(health_exp_total), child_mort = log10(child_mort))
+  
+linear_model <- lm(child_mort ~ health_exp_total, log10_financing_healthcare_of_interest)
+```
+
+## Question 1, 2, 3, 4, 5
+What is the estimated intercept (of the regression on all 186 data points)?
+(Give your answer rounded to two decimal places.)
+
+```{r q1}
+summary(linear_model)
+confint(linear_model)
+```
+
+## Question 8
+We have reported our results based on analysis of the log transformed data.
+
+For the purposes of you learning about regression, this is just fine. You learned what can be applied in all cases.
+
+However, there is an extra step that we should at least think about: what do our findings imply about the relationship between the untransformed variables? This is quite relevant, because we're often interested in money, not log transformed money, and child mortality, and not log transformed child mortality.
+
+Here is the graph of the data and regression line back on the raw (untransformed axes) (the code to make this is at the bottom of this page):
+
+There is also quite a bit of scatter, so that some countries with quite low healthcare spending have low child mortality. Can you guess which country has the highest spending?
+
+Here's the code to make that graph. We use a function called predict. This we use to get the predicted values of the regression at each of the x-values of the original data. We then have to "un-log" this (with 10^), and add a line using geom_line().
+
+
+```{r q8}
+financing_healthcare_of_interest |>
+  ggplot(aes(x = health_exp_total, y=child_mort)) +
+  geom_point() +
+  geom_line(aes(y = 10^predict(linear_model)), col="salmon") +
+  labs(title = "Fitted data compared to real data\nof child mortality vs total healthcare spending",
+       x = "Total healthcare spending (billions of USD)",
+       y = "Child mortality (1000s of deaths under age 5)") +
+  theme
+```
+

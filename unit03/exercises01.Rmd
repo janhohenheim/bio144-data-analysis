@@ -1,0 +1,162 @@
+---
+title: "Exercises 01"
+author: "Jan Hohenheim"
+date: "3/10/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r loading}
+rm(list = ls())
+library(readr)
+library(ggplot2)
+library(ggthemes)
+library(ggfortify)
+library(dplyr)
+library(GGally)
+library(glue)
+library(tidyr)
+library(latex2exp)
+
+financing_healthcare <- read_csv("../all_datasets_bio144/financing_healthcare.csv")
+head(financing_healthcare)
+summary(financing_healthcare)
+glimpse(financing_healthcare)
+
+theme <- 
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized_2(light = FALSE)
+```
+## Question 1
+How many countries (rows = number of data points) are available for the question at hand?
+
+Hint: the answer is not 178. (Do not include the life expectancy variable in the dataset.)
+
+```{r q1}
+financing_healthcare_of_interest <- financing_healthcare |>
+  filter(year == 2013) |>
+  select(continent, health_exp_total, child_mort) |>
+  drop_na()
+
+glue("There are {count(financing_healthcare_of_interest)} countries available")
+```
+
+## Question 2
+Stop! Looking at this graph, it should be very clear that we have at least one problem to deal with before we proceed with linear regression. Which of these best describes the biggest problem (this is not a trick question)?
+
+```{r q2}
+financing_healthcare_of_interest |>
+  ggplot(aes(x = health_exp_total, y = child_mort, color = continent)) +
+  geom_point() +
+  labs(title = "Child mortality vs total health expenses", x = "Total health expenses (billions 2011 USD)", y = "Child mortality (1000s of dead children under age 5)") +
+  theme
+  
+```
+
+##  Question 3 / Question 4
+Let's attempt to fix the problem by transforming the data. Knowing which transformation to make, and which axis to transform needs a bit of experience. If you look at the distribution of each variable, you will see that both have many small values, and a few large ones (i.e. they are right / positive skewed, i.e. they have a long right tail).
+
+Which transformation tends to spread out the small values, and compress the large ones? I.e. which can make a right skewed distribution more normal? (Playing with some of these transformation on some made up data, on paper, can be helpful.
+
+Now apply the appropriate transformation from the previous question to the data (both variables) and make a new graph of those transformed variables.
+
+Does the relationship now look more linear?
+```{r q4}
+ln_financing_healthcare_of_interest = 
+  financing_healthcare_of_interest |>
+  mutate(health_exp_total = log(health_exp_total), child_mort = log(child_mort))
+  
+ln_financing_healthcare_of_interest |>
+  ggplot(aes(x = health_exp_total, y = child_mort, color = continent)) +
+  geom_point() +
+  labs(title = "ln-ln of child mortality vs total health expenses", x = "health expenses (ln million $)", y = "child mortality (ln 1000s of dead children under age 5)") +
+  theme
+```
+
+##  Question 5
+The cat is most likely out of the bag now. You should have log transformed both variables. This will give us a quite nice looking linear relationship. Certainly one we could be confident to proceed to do linear regression on.
+
+A quick question, however, before we move on.
+
+Its a good idea to do log10 transformation, rather than natural log, in this case, as it makes the values on the axes easier to relate back to the raw data. In this case, when we make a graph of the log10 transformed variables, we get numbers like 0.5, 1, 1.5, 2.0, etc on the axes.
+
+```{r q5}
+log10_financing_healthcare_of_interest = 
+  financing_healthcare_of_interest |>
+  mutate(health_exp_total = log10(health_exp_total), child_mort = log10(child_mort))
+  
+log10_financing_healthcare_of_interest |>
+  mutate(health_exp_total = log(health_exp_total)) |>
+  ggplot(aes(x = health_exp_total, y = child_mort, color = continent)) +
+  geom_point() +
+  labs(title = TeX("$\\log_{10}$-$\\log_{10}$ of child mortality vs total health expenses"), x = TeX("health expenses ($\\log_{10}$ million $)"), y = TeX("child mortality ($\\log_{10}$ 1000s of dead children under age 5)")) +
+  theme
+```
+
+## Question 6 / Question 7
+The second regression preliminary: Its worth making a guess of the intercept and slope of our regression before letting R loose!
+
+To guess the intercept, it's useful to have a version of the graph in which the x-axis reaches zero. You can make this happen by adding to your ggplot  + xlim(0, 5).
+
+Its also useful to have the y-axis go far enough to include the guessed intercept:  + ylim(0, 4).
+
+With this graph, put a pen (or something straight) on your screen, where you think the best fit regression line will be. Then look where your pen cuts the y-axis. This value is your guessed intercept (on the log transformed scale -- do not back transform to the raw scale).
+
+We can also make a guess of the slope ($\beta_1$). Recall that the slope is the change in y divided by the change in x.
+
+What number is the slope close to?
+
+```{r q6}
+log10_financing_healthcare_of_interest |>
+  mutate(health_exp_total = log(health_exp_total)) |>
+  ggplot(aes(x = health_exp_total, y = child_mort, color = continent)) +
+  geom_point() +
+  ylim(0, 5) +
+  labs(title = TeX("$\\log_{10}$-$\\log_{10}$ of child mortality vs total health expenses"), x = TeX("health expenses ($\\log_{10}$ million $)"), y = TeX("child mortality ($\\log_{10}$ 1000s of dead children under age 5)")) +
+  theme
+```
+
+## Question 13
+Make a histogram of the residuals.
+
+Do you think we can safely assume that the residuals are normally distributed?
+
+```{r q13}
+linear_model <- lm(child_mort ~ health_exp_total, log10_financing_healthcare_of_interest)
+res <- residuals(lm)
+fit <- fitted(lm)
+
+data.frame(res = res) |>
+  ggplot(aes(x = res)) +
+  geom_histogram(bins = 40) +
+  theme
+```
+
+## Question 14
+Make a graph of the residuals (on the y-axis) against the fitted values (on the x-axis).
+
+Do you think there is pattern in how the residuals are related to the fitted values? For example, if this data seemed to follow a curve, we might conclude that the data is curved, and so our linear model is not so well justified
+```{r q14}
+autoplot(linear_model, smooth.colour = NA) + 
+  theme
+```
+
+## Bonus
+```{r bonus}
+log10_financing_healthcare_of_interest = 
+  financing_healthcare_of_interest |>
+  mutate(health_exp_total = log10(health_exp_total), child_mort = log10(child_mort))
+  
+log10_financing_healthcare_of_interest |>
+  mutate(health_exp_total = log(health_exp_total)) |>
+  ggplot(aes(x = health_exp_total, y = child_mort, color = continent)) +
+  geom_point() +
+  geom_smooth(method='lm', aes(group = 0), color = "grey") +
+  labs(title = TeX("log child mortality vs log total health expenses"), x = TeX("Total health expenses ($\\log_{10}$ billions 2011 USD)"), y = TeX("Child mortality ($\\log_{10}$ 1000s of dead children under age 5)")) +
+  theme
+```
+```

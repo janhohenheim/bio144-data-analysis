@@ -19,6 +19,7 @@ library("ggplot2")
 library("dplyr")
 library("GGally")
 library("tidyr")
+library(ggthemes)
 
 financing_healthcare <- read_csv("../all_datasets_bio144/financing_healthcare.csv")
 head(financing_healthcare)
@@ -82,5 +83,56 @@ financing_healthcare_of_interest <- financing_healthcare |>
   select(year, country, continent, health_exp_total, child_mort, life_expectancy) |>
   drop_na()
 
+child_mortality_per_continent <- financing_healthcare_of_interest |>
+  group_by(continent) |>
+  summarize(continent=continent, child_mortality=child_mort)
 
+child_mortality_per_continent |>
+  filter(continent == "Africa") |>
+  summarise(mean=child_mortality 
+            |> mean() 
+            |> round(1))
+```
+
+## Question 5
+Now make a box and whisker plot of child mortality (y-axis / response variable) for each continent (x-axis / explanatory variable).
+
+Hint: work with the dataset containing the 178 observations. Do not use the averages you just calculated.
+
+Hint: Use ggplot and geom_boxplot
+
+```{r q5}
+child_mortality_per_continent |>
+  ggplot(aes(x=continent, y=child_mortality)) +
+  geom_boxplot() +
+  theme_bw()
+```
+
+## Question 7
+For a little practice with graphing, make some bivariate scatterplots of child mortality on the y-axis and total health care expenditure on the x-axis.
+
+In one visualisation, assign colours to the points corresponding to their continent. (I.e. map the colour aesthetic to the levels in the continent variable.) Hint: use ggplot, because it will automatically make a nice key, showing which continents are which colour.
+
+In another, make a separate graph (i.e. facet) for each continent. Hint: use ggplot because then its real easy! Hint: the ggplot default is to make the axes limits the same on all facets, but we have quite different data ranges in different continents. Using the help for facet_wrap, see if you can work out how to make the axes limits free to vary among the facets.
+
+```{r q7}
+financing_healthcare_of_interest |>
+  ggplot(aes(x=health_exp_total, y=child_mort, color=continent)) +
+  geom_point(size=2) +
+  labs(title="Child mortality vs healthcare expenses", 
+       x="Total healthcare expenses ($)",
+       y="Child mortality (1000s of dead children under 5)") +
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_bw()
+```
+```{r q7.2}
+financing_healthcare_of_interest |>
+  ggplot(aes(x=health_exp_total, y=child_mort)) +
+  facet_wrap(~ continent, scales = "free") +
+  geom_point(size=1) +
+  labs(title="Child mortality vs healthcare expenses", 
+       x="Total healthcare expenses ($)",
+       y="Child mortality (1000s of dead children under 5)") +
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized() 
 ```

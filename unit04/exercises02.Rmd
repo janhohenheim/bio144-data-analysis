@@ -1,0 +1,172 @@
+---
+title: "Exercises 02"
+author: "Jan Hohenheim"
+date: "3/10/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r loading}
+rm(list = ls())
+library(readr)
+library(ggthemes)
+library(ggfortify)
+library(tidyverse)
+library(GGally)
+library(glue)
+library(tidyr)
+library(latex2exp)
+library(qqplotr)
+library(paletteer)
+
+theme <- 
+  theme(text = element_text(family = "Helvetica Neue")) +
+  theme_solarized_2(light = FALSE)
+```
+
+## Introduction
+
+This practical exercise concerns a dataset about the composition of milk across primate species, and how this is related to some features of those species, such as body mass and brain size. This dataset and example comes from a very nice (though somewhat advanced) book Statistical Rethinking by Richard McElreath. From that book, page 135 "Milk is a huge investment, being much more expensive than gestation. Such an expensive resource is likely adjusted in subtle ways, depending upon the physiological and developmental details of each primate species."
+
+The dataset named milk_rethinking.csv is in the usual place.
+
+Before looking at the data, can you make some plausible hypotheses about how the energetic content of the milk (calories per gram of milk, variable kcal.per.g) and brain size (percentage of brain mass that is neocortex, variable neocortex.perc) might be related? Some suggest a positive relationship, but what might be the biological reason for this?
+
+We will also take into account the average female body mass (variable mass).
+
+The dataset contains other variables, but we're interested in only those three for the moment.
+
+Open a new script and:
+
+- Prepare your script (rm(list=ls()), load libraries).
+- Read the data into R. It is the milk_rethinking.csv dataset (get it from the usual place).
+- The data is already clean and tidy, so no wrangling or quality control is required.
+- Visualise the distributions of three variables we're currently interested in.
+- Visualise the data (just those three variables), with question in mind.
+```{r intro}
+all_milk_data <- read_csv("../all_datasets_bio144/milk_rethinking.csv")
+milk <- all_milk_data |>
+  select(kcal.per.g, neocortex.perc, mass)
+print("Summary:")
+summary(milk)
+print("Glimpse:")
+glimpse(milk)
+```
+```{r intro2}
+p1 <- milk |> ggplot(aes(x = kcal.per.g)) +
+  geom_histogram(fill = "salmon", bins = 17) +
+  labs(title = "Distribution of milk calories",
+       x = "calories per gram") +
+  theme
+
+p2 <- milk |> ggplot(aes(x = neocortex.perc)) +
+  geom_histogram(fill = "salmon", bins = 17) +
+  labs(title = "Distribution of brain size",
+       x = "percentage of brain occupied by neocortex") +
+  theme
+
+p3 <- milk |> ggplot(aes(x = mass)) +
+  geom_histogram(fill = "salmon", bins = 17) +
+  labs(title = "Distribution of mass",
+       x = "female mass in kg") +
+  theme
+
+plot_grid(p1, p2, p3)
+
+milk |>
+  ggpairs() +
+  theme
+```
+
+## Residuals
+
+Now fit the model for kcal.per.g, using the lm function. You should enter two explanatory variables (neocortex.perc and mass) separated with a plus, just like in the body fat multiple regression walkthrough videos.
+
+Make the model diagnostic graphs, and check if you think the assumptions of a linear model are met...
+
+Hint: use the autoplot function from the ggfortify package.
+
+```{r res}
+linear_model <- lm(kcal.per.g ~ neocortex.perc + mass, milk)
+autoplot(linear_model, smooth.colour = NA) +
+  theme
+```
+
+## Slopes
+Now look at the coefficients that have been estimated.
+
+Hint: (use the summary function).
+
+```{r slopes}
+summary(linear_model)
+confint(linear_model)
+```
+
+## Comments
+
+
+
+That's a bit of a surprise eh! We would not have guessed that from the exploration of the data with the bivariate scatterplots. There was no evidence of these relationships.
+
+By the way, its worth noting here that the degrees of freedom are as expected (14) and the explanatory power of the model is 27% (i.e. adjusted r-squared 0.27). (In the next exercise you will find out what is the adjusted r-squared, and demonstrate for yourself why the adjustment is needed.)
+
+Before we consider how we could end up with patterns in the multiple regression output, but not be able to see them in the raw data, please make a graph that show the estimated relationship between kcal.per.g and mass, and another of the estimated relationship between kcal.per.g and neocortex.perc.
+
+Hints: follow the example in the body fat video walkthrough (perhaps even adapt that code); use the expand.grid and predict functions. Use the geom_ribbon function to add the confidence band on the graphs.
+
+Then write some sentences that would be appropriate for reporting the results. Remember to focus on the biology, not the statistics (though these you should report also).
+
+```{r comments}
+const_mass <- expand.grid(
+  neocortex.perc = seq(min(milk$neocortex.perc), 
+                       max(milk$neocortex.perc), 
+                       length = nrow(milk)),
+  mass = mean(milk$mass))
+
+predicted_nutrition1 <- linear_model |>
+  predict(newdata = const_mass, interval = "confidence")
+
+
+predicted_milk1 <- const_mass |>
+  cbind(predicted_nutrition1)
+
+p1 <- predicted_milk1 |>
+  ggplot(aes(x = neocortex.perc, y = fit)) +
+  geom_line() +
+  geom_smooth(aes(ymin = lwr, ymax = upr), stat = "identity") +
+  labs(title = "Model prediction of milk nutrition\nfor constant mass",
+       x = "brain size (percentage of brain occupied by neocortex)",
+       y = "predicted milk nutrition (kcal per gram)") +
+  theme
+
+
+const_neocortex_perc <- expand.grid(
+  neocortex.perc = mean(milk$neocortex.perc),
+  mass = seq(min(milk$mass),
+             max(milk$mass), 
+             length = nrow(milk)))
+
+predicted_nutrition2 <- linear_model |>
+  predict(newdata = const_neocortex_perc, interval = "confidence")
+
+
+predicted_milk2 <- const_neocortex_perc |>
+  cbind(predicted_nutrition2)
+
+p2 <- predicted_milk2 |>
+  ggplot(aes(x = mass, y = fit)) +
+  geom_line() +
+  geom_smooth(aes(ymin = lwr, ymax = upr), stat = "identity") +
+  labs(title = "Model prediction of milk nutrition\nfor constant brain size",
+       x = "female mass (kg)",
+       y = "predicted milk nutrition (kcal per gram)") +
+  theme
+
+plot_grid(p1, p2)
+```
+
+> The nutrition of milk correlates negatively with mass (p of t test < 0.02) and positively with brain size (p of t test < 0.05). Overall p of F test was < 0.05. 27% of the variation is explained by this model
